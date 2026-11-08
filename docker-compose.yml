@@ -1,0 +1,16 @@
+services:
+  pocket-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pocket-tracker-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PORT:-4000}:4000"
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/app/data/pocket.db
+      - HOST=0.0.0.0
+    volumes:
+      - ./api/data:/app/data

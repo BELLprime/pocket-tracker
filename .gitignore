@@ -1,0 +1,30 @@
+# ====================================================================
+# 🔒 SECURITY & PRIVACY RULES (รูปแบบเดียวกับ final-T18 + ป้องกันข้อมูลส่วนตัว)
+# อนุญาตให้ api/data/schema.sql ขึ้น Git ได้
+# แต่บล็อกไฟล์ฐานข้อมูลจริง (*.db) และ .env ทุกชนิดไม่ให้ขึ้น Git เด็ดขาด!
+# ====================================================================
+
+# 1. ค่าลับ — ห้าม commit (commit เฉพาะ .env.example)
+.env
+.env.*
+*.local
+!.env.example
+!api/.env.example
+
+# 2. ไฟล์ฐานข้อมูล SQLite จริง (ข้อมูลการเงินส่วนตัว — ห้ามขึ้น Git เด็ดขาด)
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 3. Dependencies & Build
+node_modules/
+frontend/dist/
+coverage/
+
+# 4. OS & Logs
+.DS_Store
+Thumbs.db
+*.log

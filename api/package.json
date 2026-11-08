@@ -1,0 +1,20 @@
+{
+  "name": "pocket-tracker-api",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Private Monthly Income & Expense Tracker API + Telegram Chatbot (Final-T18 Structure)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:setup": "node scripts/setup-db.mjs",
+    "db:reset": "node scripts/setup-db.mjs --force"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  }
+}
