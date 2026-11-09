@@ -27,43 +27,45 @@ const SHAPE = `
               t.created_at                    AS createdAt
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id`;
-export function findAll({ monthKey, type } = {}) {
+export async function findAll({ monthKey, type } = {}) {
   let sql = `${SHAPE} WHERE 1=1`;
-  const params = [];
-  if (monthKey) {sql += ' AND t.month_key = ?'; params.push(Number(monthKey));}
-  if (type) { sql += ' AND t.type = ?'; params.push(Number(type)); }
+  const args = [];
+  if (monthKey) {sql += ' AND t.month_key = ?'; args.push(Number(monthKey));}
+  if (type) { sql += ' AND t.type = ?'; args.push(Number(type)); }
   sql += ' ORDER BY t.tx_date DESC, t.id DESC';
-  return getDb().prepare(`${sql}`).all(...params);
+  const res = await getDb().execute({ sql, args });
+  return res.rows;
 }
-export function findById(id) {
-  return getDb().prepare(`${SHAPE} WHERE t.id = ?`).get(Number(id)) ?? null;
+export async function findById(id) {
+  const res = await getDb().execute({
+    sql: `${SHAPE} WHERE t.id = ?`,
+    args: [Number(id)] 
+  });
+  return res.rows[0] ?? null;
 }
 //basic function
-export function create(data) {
+export async function create(data) {
   const typeInt = Number(data.type ?? TX_TYPE.EXPENSE);
   const amountSatang = bahtToSatang(data.amountBaht);
   const txDate = data.txDate ? Number(data.txDate) : getTodayInt();
   const monthKey = Math.floor(txDate / 100);
-  const result = getDb().prepare(`
-    INSERT INTO transactions (type, amount_satang, title, tx_date, month_key)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    typeInt, 
-    amountSatang, 
-    data.title.trim(), 
-    txDate, 
-    monthKey
-  );
-  return findById(result.lastInsertRowid);
+  const result = await getDb().execute({
+    sql: `
+      INSERT INTO transactions (type, amount_satang, title, tx_date, month_key)
+      VALUES (?, ?, ?, ?, ?)
+    `,
+    args: [typeInt, amountSatang, data.title.trim(), txDate, monthKey]
+  });
+  return await findById(Number(result.lastInsertRowid));
 }
-export function getMonthlySummary(monthKey = getCurrentMonthInt()) {
-  const list = findAll({monthKey});
+export async function getMonthlySummary(monthKey = getCurrentMonthInt()) {
+  const list = await findAll({monthKey});
   let incomeSatang=0;
   let expenseSatang=0;
 
   for (const l of list) {
-    if (l.type === TX_TYPE.INCOME) incomeSatang += l.amountSatang;
-    else expenseSatang += l.amountSatang;
+    if (Number(l.type) === TX_TYPE.INCOME) incomeSatang += Number(l.amountSatang);
+    else expenseSatang += Number(l.amountSatang);
   }
   const totalIncome = satangToBaht(incomeSatang);
   const totalExpense = satangToBaht(expenseSatang);
@@ -75,9 +77,12 @@ export function getMonthlySummary(monthKey = getCurrentMonthInt()) {
     transactionCount: list.length
   };
 }
-export function remove(id) {
-  const existing = findById(id);
+export async function remove(id) {
+  const existing = await findById(id);
   if (!existing) return null;
-  getDb().prepare(`DELETE FROM transactions WHERE id = ?`).run(Number(id));
+  await getDb().execute({
+    sql: `DELETE FROM transactions WHERE id = ?`,
+    args: [Number(id)]
+  });
   return existing;
 }

@@ -18,5 +18,7 @@ export const config = {
     : path.join(API_ROOT, 'data', 'pocket.db'),
   schemaFile: path.join(API_ROOT, 'data', 'schema.sql'),
   telegramBotToken: (process.env.TELEGRAM_BOT_TOKEN ?? '').trim(),
-  allowedTelegramIds: (process.env.ALLOWED_TELEGRAM_IDS ?? '').trim()
+  allowedTelegramIds: (process.env.ALLOWED_TELEGRAM_IDS ?? '').trim(),
+  tursoUrl: (process.env.TURSO_DATABASE_URL ?? '').trim(),
+  tursoAuthToken: (process.env.TURSO_AUTH_TOKEN ?? '').trim()
 };

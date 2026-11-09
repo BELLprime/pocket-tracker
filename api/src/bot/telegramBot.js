@@ -23,7 +23,7 @@ const CONFIRM_KEYBOARD = {
   ]
 };
 
-export function handleIncomingText(text, chatUserId) {
+export async function handleIncomingText(text, chatUserId) {
   if (config.allowedTelegramIds && String(chatUserId) !== String(config.allowedTelegramIds)) {
     return { text: '!!Access denied. Owner only.' };
   }
@@ -40,7 +40,7 @@ export function handleIncomingText(text, chatUserId) {
   }
 
   if (parsed.command === 'summary') {
-    const s = transactionService.getMonthlySummary();
+    const s = await transactionService.getMonthlySummary();
     return {
       text: `Summary ${s.monthKey}\n🟢 Income: +${s.totalIncome} ฿\n🔴 Expense: -${s.totalExpense} ฿\n💰 Balance: ${s.balance} ฿`
     }
@@ -48,7 +48,7 @@ export function handleIncomingText(text, chatUserId) {
   return { text: 'Send "<item> <amount>" (e.g., Snack 20) or /summary' };
 }
 
-export function handleCallbackQuery(action, chatUserId) {
+export async function handleCallbackQuery(action, chatUserId) {
   const userKey = String(chatUserId);
   const draft = pendingDrafts.get(userKey);
 
@@ -76,7 +76,7 @@ export function handleCallbackQuery(action, chatUserId) {
   }
 
    if (action === 'confirm' && draft.type) {
-    const created = transactionService.create(draft);
+    const created = await transactionService.create(draft);
     pendingDrafts.delete(userKey);
     const typeLabel = created.type === 1 ? '🔴 Expense' : '🟢 Income';
     return {
@@ -112,7 +112,7 @@ export function startTelegramPolling() {
             if (!config.allowedTelegramIds) {
               console.log(`[Security Hint] Your Telegram Chat ID is: ${senderId} (Add ALLOWED_TELEGRAM_IDS=${senderId} in .env to lock bot)`);
             }
-            const response = handleIncomingText(msg.text, senderId);
+            const response = await handleIncomingText(msg.text, senderId);
             if (response?.text) {
               await fetch(`${baseUrl}/sendMessage`, {
                 method: 'POST',
@@ -131,7 +131,7 @@ export function startTelegramPolling() {
             const chatId = cq.message?.chat?.id;
             const messageId = cq.message?.message_id;
             const userId = cq.from?.id ?? chatId;
-            const response = handleCallbackQuery(cq.data, userId);
+            const response = await handleCallbackQuery(cq.data, userId);
 
             // Telegram 
             await fetch(`${baseUrl}/answerCallbackQuery`, {
