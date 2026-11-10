@@ -78,9 +78,13 @@ export async function handleCallbackQuery(action, chatUserId) {
    if (action === 'confirm' && draft.type) {
     const created = await transactionService.create(draft);
     pendingDrafts.delete(userKey);
-    const typeLabel = created.type === 1 ? '🔴 Expense' : '🟢 Income';
+    const isExpend  = Number(created.type) === 1;
+    const typeLabel = isExpend ? '🔴 Expense' : '🟢 Income';
+    const gifUrl = isExpend? 'https://media.tenor.com/WuVVP5QKTsYAAAAM/well-there%27s-nothing-we-can-do-napoleon.gif'
+                           : 'https://media.tenor.com/X4H0T0VxgokAAAAM/robert-redford-robert.gif';
     return {
-      text: `✅ Saved! (#${created.id})\n${typeLabel}: ${created.title} (${draft.amountBaht} ฿)`
+      text: `✅ Saved! (#${created.id})\n${typeLabel}: ${created.title} (${draft.amountBaht} ฿)`,
+      gifUrl
     };
   }
   return { text: 'Please select an option below.↓' };
@@ -104,8 +108,7 @@ export function startTelegramPolling() {
       if (data?.ok && Array.isArray(data.result)) {
         for (const update of data.result) {
           offset = update.update_id + 1;
-
-          // 1: พิมพ์ข้อความปกติ
+          //normal input message
           if (update.message?.text && update.message?.chat) {
             const msg = update.message;
             const senderId = msg.from?.id ?? msg.chat.id;
@@ -133,7 +136,6 @@ export function startTelegramPolling() {
             const userId = cq.from?.id ?? chatId;
             const response = await handleCallbackQuery(cq.data, userId);
 
-            // Telegram 
             await fetch(`${baseUrl}/answerCallbackQuery`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -152,6 +154,19 @@ export function startTelegramPolling() {
                   reply_markup: response.replyMarkup
                 })
               });
+            }
+            if (chatId && response?.gifUrl) {
+              const gifRes = await fetch(`${baseUrl}/sendAnimation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  animation: response.gifUrl
+                })
+              });
+              const gifData = await gifRes.json();
+              if (!gifData.ok)
+                console.error('[Telegram GIF Error]:',gifData.description);
             }
           }
         }
