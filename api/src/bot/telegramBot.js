@@ -136,38 +136,37 @@ export function startTelegramPolling() {
             const userId = cq.from?.id ?? chatId;
             const response = await handleCallbackQuery(cq.data, userId);
 
-            await fetch(`${baseUrl}/answerCallbackQuery`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ callback_query_id: cq.id })
-            });
-
-            // edit / chang
-            if (chatId && messageId && response?.text) {
-              await fetch(`${baseUrl}/editMessageText`, {
+            await Promise.all([
+              fetch(`${baseUrl}/answerCallbackQuery`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  message_id: messageId,
-                  text: response.text,
-                  reply_markup: response.replyMarkup
-                })
-              });
-            }
-            if (chatId && response?.gifUrl) {
-              const gifRes = await fetch(`${baseUrl}/sendAnimation`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  animation: response.gifUrl
-                })
-              });
-              const gifData = await gifRes.json();
-              if (!gifData.ok)
-                console.error('[Telegram GIF Error]:',gifData.description);
-            }
+                body: JSON.stringify({ callback_query_id: cq.id })
+              }),
+              // edit / change
+              chatId && messageId && response?.text
+                ? fetch(`${baseUrl}/editMessageText`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: chatId,
+                      message_id: messageId,
+                      text: response.text,
+                      reply_markup: response.replyMarkup
+                    })
+                  })
+                : null,
+              //gif
+              chatId && response?.gifUrl
+                ? fetch(`${baseUrl}/sendAnimation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: chatId,
+                      animation: response.gifUrl
+                    })
+                  })
+                : null
+            ]);
           }
         }
       }
