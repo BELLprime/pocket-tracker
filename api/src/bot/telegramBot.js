@@ -38,14 +38,28 @@ export async function handleIncomingText(text, chatUserId) {
       replyMarkup: TYPE_SELECTION_KEYBOARD
     };
   }
-
+  if (parsed.command === 'budget') {
+    const b = await transactionService.setMonthlyBudget(parsed.limitBaht);
+    return {
+      text: `Set Budget for ${b.monthKey} successfully!\nLimit: ${b.budgetLimit.toLocaleString()} ฿`
+    };
+  }
   if (parsed.command === 'summary') {
     const s = await transactionService.getMonthlySummary();
-    return {
-      text: `Summary ${s.monthKey}\n🟢 Income: +${s.totalIncome} ฿\n🔴 Expense: -${s.totalExpense} ฿\n💰 Balance: ${s.balance} ฿`
+    let text = `Summary ${s.monthKey}\n🟢 Income: +${s.totalIncome.toLocaleString()} ฿\n🔴 Expense: -${s.totalExpense.toLocaleString()} ฿\n💰 Balance: ${s.balance.toLocaleString()} ฿`;
+    // ถ้ามีการตั้งงบไว้ ให้แสดงสถานะงบเพิ่ม
+    if (s.budgetLimit !== null) {
+      const percentUsed = s.budgetLimit > 0 ? ((s.totalExpense / s.budgetLimit) * 100).toFixed(1) : 0;
+      const status = s.budgetRemaining < 0 ? '❕❕❕❕' : '(¬‿¬)';
+      text += `\n\n${status} Budget: ${s.totalExpense.toLocaleString()} / ${s.budgetLimit.toLocaleString()} ฿ (${percentUsed}%)`;
+      if (s.budgetRemaining < 0) {
+        text += `\nOver budget by ${Math.abs(s.budgetRemaining).toLocaleString()} ฿!`;
+      } else {
+        text += `\nRemaining: ${s.budgetRemaining.toLocaleString()} ฿`;
+      }
     }
+    return { text };
   } 
-  return { text: 'Send "<item> <amount>" (e.g., Snack 20) or /summary' };
 }
 
 export async function handleCallbackQuery(action, chatUserId) {

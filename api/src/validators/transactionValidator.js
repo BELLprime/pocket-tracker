@@ -3,7 +3,14 @@ import { error } from "node:console";
 export function parseChatMessage(rawText) {
   const text = String(rawText ?? '').trim();
   if (!text) return null;
-  if (text === '/summary' || text === 'สรุป') return { command: 'summary' };
+  if (text === '/summary') return { command: 'summary' };
+  
+  const budgetMatch = text.match(/^(?:\/budget)\s+(\d+(?:\.\d+)?)$/i);
+  if (budgetMatch) {
+    const limitBaht = Number(budgetMatch[1]);
+    if (limitBaht >= 0) return { command: 'budget', limitBaht };
+  }
+
   const splitTxt = text.match(/^(.+?)\s+(\d+(?:\.\d+)?)$/);
   if (splitTxt) {
     const title = splitTxt[1].trim();

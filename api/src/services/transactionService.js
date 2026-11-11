@@ -43,7 +43,7 @@ export async function findById(id) {
   });
   return res.rows[0] ?? null;
 }
-//basic function
+//basic function (Table transactions)
 export async function create(data) {
   const typeInt = Number(data.type ?? TX_TYPE.EXPENSE);
   const amountSatang = bahtToSatang(data.amountBaht);
@@ -60,6 +60,7 @@ export async function create(data) {
 }
 export async function getMonthlySummary(monthKey = getCurrentMonthInt()) {
   const list = await findAll({monthKey});
+  const budget = await getMonthlyBudget(monthKey);
   let incomeSatang=0;
   let expenseSatang=0;
 
@@ -69,12 +70,16 @@ export async function getMonthlySummary(monthKey = getCurrentMonthInt()) {
   }
   const totalIncome = satangToBaht(incomeSatang);
   const totalExpense = satangToBaht(expenseSatang);
+  const budgetLimit = budget ? budget.budgetLimit : null;
+  const budgetRemaining = budgetLimit !== null ? budgetLimit - totalExpense : null;
   return {
     monthKey: Number(monthKey),
     totalIncome,
     totalExpense,
     balance: totalIncome - totalExpense,
-    transactionCount: list.length
+    transactionCount: list.length,
+    budgetLimit,
+    budgetRemaining
   };
 }
 export async function remove(id) {
@@ -85,4 +90,37 @@ export async function remove(id) {
     args: [Number(id)]
   });
   return existing;
+}
+
+//(Table monthly_budgets)
+export async function getMonthlyBudget(monthKey = getCurrentMonthInt()){
+  const res = await getDb().execute({
+    sql: `
+      SELECT  month_key           AS monthKey,
+              budget_limit_satang AS budgetLimitSatang,
+              updated_at          AS updatedAt
+      FROM monthly_budgets
+      WHERE month_key = ? `,
+    args:  [Number(monthKey)]
+  });
+  const row = res.rows[0];
+  if (!row) return null;
+  return {
+    monthKey: Number(row.monthKey),
+    budgetLimit: satangToBaht(row.budgetLimitSatang)
+  }; 
+}
+
+export async function setMonthlyBudget(limitBaht,monthKey = getCurrentMonthInt()) {
+  const limitSatang = bahtToSatang(limitBaht);
+  await getDb().execute({
+    sql:`
+      INSERT INTO monthly_budgets (month_key,budget_limit_satang,updated_at)
+      VALUES (?,?,unixepoch())
+      ON CONFLICT(month_key) DO UPDATE SET
+        budget_limit_satang = excluded.budget_limit_satang,
+        updated_at = unixepoch()`,     //upsert 
+    args: [Number(monthKey), limitSatang]
+  });
+  return await getMonthlyBudget(monthKey);
 }
