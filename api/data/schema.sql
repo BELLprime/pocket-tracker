@@ -6,15 +6,6 @@ PRAGMA temp_store = MEMORY;      -- (ประมวลผล GROUP BY / ORDER B
 
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS monthly_budgets;
-DROP TABLE IF EXISTS categories;
-
-CREATE TABLE categories (
-  id        INTEGER PRIMARY KEY,
-  type      INTEGER NOT NULL CHECK (type IN (1, 2)),  -- 1 = รายจ่าย, 2 = รายรับ
-  name      TEXT NOT NULL UNIQUE,
-  icon      TEXT NOT NULL DEFAULT '',                     
-  gif_file  TEXT NOT NULL DEFAULT ''                     
-) STRICT;
 
 CREATE TABLE transactions (
   id            INTEGER PRIMARY KEY,
@@ -23,11 +14,9 @@ CREATE TABLE transactions (
   title         TEXT NOT NULL,
   tx_date       INTEGER NOT NULL,                             -- YYYYMMDD 
   month_key     INTEGER NOT NULL,                             -- YYYYMM 
-  category_id   INTEGER DEFAULT NULL,                         -- 🔌 เผื่ออนาคตเชื่อมหมวดหมู่/GIF (เฟสแรกเป็น NULL ได้)
   note          TEXT NOT NULL DEFAULT '',                     -- 🔌 เผื่ออนาคตจดหมายเหตุเพิ่ม
   created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
-  updated_at    INTEGER DEFAULT NULL,                         -- 🔌 เผื่ออนาคตแก้ไขรายการผ่านหน้าเว็บ
-  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+  updated_at    INTEGER DEFAULT NULL                         -- 🔌 เผื่ออนาคตแก้ไขรายการผ่านหน้าเว็บ
 ) STRICT;
 
 CREATE TABLE monthly_budgets (

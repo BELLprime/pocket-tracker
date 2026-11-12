@@ -20,6 +20,9 @@ test('1. parseChatMessage extracts title and amount correctly', () => {
 
   const summaryCmd = parseChatMessage('/summary');
   assert.equal(summaryCmd.command, 'summary');
+
+  const undoCmd = parseChatMessage('/undo');
+  assert.equal(undoCmd.command, 'undo');
 });
 
 // 2. Input validator test
@@ -55,4 +58,21 @@ test('3. Telegram bot 3-step flow saves to DB, returns GIF, and cleans up', asyn
 
   const removed = await transactionService.remove(createdId);
   assert.equal(Number(removed.id), createdId);
+});
+
+// 4. Undo command test
+test('4. /undo command removes the latest transaction', async () => {
+  const testUserId = config.allowedTelegramIds || '999999';
+
+  // Create an item directly to test undo
+  await transactionService.create({ title: 'UndoTarget', amountBaht: 40, type: 1 });
+
+  // Call /undo via handleIncomingText
+  const response = await handleIncomingText('/undo', testUserId);
+  assert.ok(response.text.includes('Undo success'));
+  assert.ok(response.text.includes('UndoTarget'));
+
+  // Ensure it was actually removed from DB
+  const latest = await transactionService.findLatest();
+  assert.notEqual(latest?.title, 'UndoTarget');
 });

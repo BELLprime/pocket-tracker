@@ -59,7 +59,14 @@ export async function handleIncomingText(text, chatUserId) {
       }
     }
     return { text };
-  } 
+  }
+  if (parsed.command === 'undo') { 
+    const undo = await transactionService.undoLastMessages();
+    if (!undo) {
+      return { text: 'List in this month is empty.' };
+    }
+    return { text: `↩"${undo.title}" (${transactionService.satangToBaht(undo.amountSatang)} ฿) → (Undo success.)` };
+  }
 }
 
 export async function handleCallbackQuery(action, chatUserId) {

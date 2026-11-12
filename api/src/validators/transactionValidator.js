@@ -4,6 +4,7 @@ export function parseChatMessage(rawText) {
   const text = String(rawText ?? '').trim();
   if (!text) return null;
   if (text === '/summary') return { command: 'summary' };
+  if (text === '/undo') return { command: 'undo'};
   
   const budgetMatch = text.match(/^(?:\/budget)\s+(\d+(?:\.\d+)?)$/i);
   if (budgetMatch) {
@@ -17,6 +18,7 @@ export function parseChatMessage(rawText) {
     const amountBaht = Number(splitTxt[2]);
     if (title && amountBaht > 0) return { command: 'draft', title, amountBaht };
   }
+
   return { command: 'unknown' };
 }
 

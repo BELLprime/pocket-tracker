@@ -25,8 +25,7 @@ const SHAPE = `
               t.title, t.tx_date              AS txDate,
               t.month_key                     AS monthKey, 
               t.created_at                    AS createdAt
-      FROM transactions t
-      LEFT JOIN categories c ON c.id = t.category_id`;
+      FROM transactions t`;
 export async function findAll({ monthKey, type } = {}) {
   let sql = `${SHAPE} WHERE 1=1`;
   const args = [];
@@ -40,6 +39,17 @@ export async function findById(id) {
   const res = await getDb().execute({
     sql: `${SHAPE} WHERE t.id = ?`,
     args: [Number(id)] 
+  });
+  return res.rows[0] ?? null;
+}
+export async function findLatest(monthKey = getCurrentMonthInt()) {
+  const res = await getDb().execute({
+    sql: `
+      ${SHAPE} 
+      WHERE t.month_key = ?
+      ORDER BY t.created_at DESC, t.id DESC 
+      LIMIT 1`,
+    args: [Number(monthKey)]
   });
   return res.rows[0] ?? null;
 }
@@ -123,4 +133,11 @@ export async function setMonthlyBudget(limitBaht,monthKey = getCurrentMonthInt()
     args: [Number(monthKey), limitSatang]
   });
   return await getMonthlyBudget(monthKey);
+}
+
+export async function undoLastMessages(monthKey = getCurrentMonthInt()) {
+  const latest = await findLatest(monthKey);
+  if (!latest) return null;
+  await remove(latest.id);
+  return latest;
 }
