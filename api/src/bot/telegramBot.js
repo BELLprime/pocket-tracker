@@ -119,6 +119,18 @@ export function startTelegramPolling() {
   }
 
   const baseUrl = `https://api.telegram.org/bot${config.telegramBotToken}`;
+  fetch(`${baseUrl}/setMyCommands`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      commands: [
+        { command: 'summary', description: 'Summary this month' },
+        { command: 'budget', description: 'Set budget (e.g. /budget 5000)' },
+        { command: 'undo', description: 'Undo latest transaction' }
+      ]
+    })
+  }).catch((err) => console.error('Failed to set bot commands:', err));
+
   let offset = 0;
   console.log('[Telegram Bot] เริ่มต้นรอรับข้อความและการกดปุ่มจากมือถือ...');
 
