@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import transactionRoutes from './routes/transactionRoutes.js';
-import { handleIncomingText, handleCallbackQuery } from './bot/telegramBot.js';
+import { handleIncomingText, handleCallbackQuery } from './bot/telegramHandlers.js';
 
 const app = express();
 
@@ -18,13 +18,13 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-app.post('/api/bot/simulate', (req, res) => {
+app.post('/api/bot/simulate', async (req, res) => {
   const { text, action, chatUserId = 'local-tester' } = req.body ?? {};
   if (action) {
-    const response = handleCallbackQuery(action, chatUserId);
+    const response = await handleCallbackQuery(action, chatUserId);
     return res.status(200).json({ action, response });
   }
-  const response = handleIncomingText(text, chatUserId);
+  const response = await handleIncomingText(text, chatUserId);
   return res.status(200).json({ input: text, response });
 });
 

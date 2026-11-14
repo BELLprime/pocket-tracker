@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loadSeed } from '../src/services/db.js';
 import * as transactionService from '../src/services/transactionService.js';
 import { parseChatMessage, validateTransactionInput } from '../src/validators/transactionValidator.js';
-import { handleIncomingText, handleCallbackQuery } from '../src/bot/telegramBot.js';
+import { handleIncomingText, handleCallbackQuery } from '../src/bot/telegramHandlers.js';
 import { config } from '../src/config.js';
 
 // Initialize DB before running tests
@@ -42,11 +42,15 @@ test('3. Telegram bot 3-step flow saves to DB, returns GIF, and cleans up', asyn
   const step1 = await handleIncomingText('TestItem 99', testUserId);
   assert.ok(step1.text.includes('TestItem'));
 
-  // Step 2: Select Expense (type:1)
+  // Step 2: Select Expense (type:1) -> asks for category
   const step2 = await handleCallbackQuery('type:1', testUserId);
-  assert.ok(step2.text.includes('Confirm to save?'));
+  assert.ok(step2.text.includes('Select category:'));
 
-  // Step 3: Confirm save and check GIF
+  // Step 3: Select Food & Snack (cat:1) -> asks to confirm
+  const stepCat = await handleCallbackQuery('cat:1', testUserId);
+  assert.ok(stepCat.text.includes('Confirm to save?'));
+
+  // Step 4: Confirm save and check GIF
   const step3 = await handleCallbackQuery('confirm', testUserId);
   assert.ok(step3.text.includes('✅ Saved!'));
   assert.ok(step3.gifUrl.includes('napoleon.gif'));

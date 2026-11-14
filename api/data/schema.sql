@@ -6,6 +6,13 @@ PRAGMA temp_store = MEMORY;      -- (ประมวลผล GROUP BY / ORDER B
 
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS monthly_budgets;
+DROP TABLE IF EXISTS categories;
+
+CREATE TABLE categories (
+  id   INTEGER PRIMARY KEY,
+  type INTEGER NOT NULL CHECK (type IN (1, 2)), 
+  name TEXT NOT NULL UNIQUE
+) STRICT;
 
 CREATE TABLE transactions (
   id            INTEGER PRIMARY KEY,
@@ -14,9 +21,11 @@ CREATE TABLE transactions (
   title         TEXT NOT NULL,
   tx_date       INTEGER NOT NULL,                             -- YYYYMMDD 
   month_key     INTEGER NOT NULL,                             -- YYYYMM 
-  note          TEXT NOT NULL DEFAULT '',                     -- 🔌 เผื่ออนาคตจดหมายเหตุเพิ่ม
+  category_id   INTEGER DEFAULT NULL,                         
+  note          TEXT NOT NULL DEFAULT '',                     -- 🔌 
   created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
-  updated_at    INTEGER DEFAULT NULL                         -- 🔌 เผื่ออนาคตแก้ไขรายการผ่านหน้าเว็บ
+  updated_at    INTEGER DEFAULT NULL,
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 ) STRICT;
 
 CREATE TABLE monthly_budgets (
@@ -27,3 +36,12 @@ CREATE TABLE monthly_budgets (
 
 CREATE INDEX idx_tx_month_type ON transactions(month_key, type);
 CREATE INDEX idx_tx_date ON transactions(tx_date DESC);
+
+-- 🏷️ ข้อมูลหมวดหมู่เริ่มต้น (Seed Categories)
+INSERT INTO categories (id, type, name) VALUES
+  (1, 1, 'Food & Snack'),
+  (2, 1, 'Transport'),
+  (3, 1, 'Bills'),
+  (4, 1, 'Other Expense'),
+  (5, 2, 'Salary'),
+  (6, 2, 'Other Income');

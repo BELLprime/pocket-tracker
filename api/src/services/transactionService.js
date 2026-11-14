@@ -23,9 +23,11 @@ export function satangToBaht(satang) {
 const SHAPE = `
       SELECT  t.id, t.type, t.amount_satang   AS amountSatang,
               t.title, t.tx_date              AS txDate,
-              t.month_key                     AS monthKey, 
+              t.month_key                     AS monthKey,
+              t.category_id                   AS categoryId, 
               t.created_at                    AS createdAt
-      FROM transactions t`;
+      FROM transactions t
+      LEFT JOIN categories c ON c.id = t.category_id`;
 export async function findAll({ monthKey, type } = {}) {
   let sql = `${SHAPE} WHERE 1=1`;
   const args = [];
@@ -57,14 +59,15 @@ export async function findLatest(monthKey = getCurrentMonthInt()) {
 export async function create(data) {
   const typeInt = Number(data.type ?? TX_TYPE.EXPENSE);
   const amountSatang = bahtToSatang(data.amountBaht);
+  const categoryId = data.categoryId ? Number(data.categoryId) : null;
   const txDate = data.txDate ? Number(data.txDate) : getTodayInt();
   const monthKey = Math.floor(txDate / 100);
   const result = await getDb().execute({
     sql: `
-      INSERT INTO transactions (type, amount_satang, title, tx_date, month_key)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO transactions (type, amount_satang, title, category_id, tx_date, month_key)
+      VALUES (?, ?, ?, ?, ?, ?)
     `,
-    args: [typeInt, amountSatang, data.title.trim(), txDate, monthKey]
+    args: [typeInt, amountSatang, data.title.trim(), categoryId, txDate, monthKey]
   });
   return await findById(Number(result.lastInsertRowid));
 }
