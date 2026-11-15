@@ -21,13 +21,8 @@ export async function loadSeed() {
   }
 
   await db.execute('PRAGMA foreign_keys = ON;');
-  const check = await db.execute(
-    "SELECT COUNT(*) AS c FROM sqlite_master WHERE type='table' AND name='transactions'"
-  );
-  const ready = Number(check.rows[0]?.c ?? 0) > 0;
 
-  if (!ready && existsSync(config.schemaFile)) {
-    console.log('[DB] Initializing database tables from schema.sql...');
+  if (existsSync(config.schemaFile)) {
     const rawSql = readFileSync(config.schemaFile, 'utf8');
     const cleanSql = rawSql
       .split('\n')
@@ -36,22 +31,6 @@ export async function loadSeed() {
     if (cleanSql.trim()) {
       await db.executeMultiple(cleanSql);
     }
-  } 
-  else {
-    await db.executeMultiple(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id   INTEGER PRIMARY KEY,
-        type INTEGER NOT NULL CHECK (type IN (1, 2)),
-        name TEXT NOT NULL UNIQUE
-      ) STRICT;
-      INSERT OR IGNORE INTO categories (id, type, name) VALUES
-        (1, 1, 'Food & Snack'),
-        (2, 1, 'Transport'),
-        (3, 1, 'Bills'),
-        (4, 1, 'Other Expense'),
-        (5, 2, 'Salary'),
-        (6, 2, 'Other Income');
-    `);
   }
 }
 

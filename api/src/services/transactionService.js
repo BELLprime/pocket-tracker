@@ -6,12 +6,16 @@ export const TX_TYPE = {
 
 //util funtion
 export function getTodayInt() { //INTEGER: YYYYMMDD
-  const now = new Date();
-  return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+    const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date()); // "2026-11-14"
+  return Number(parts.replaceAll('-', ''));
 }
 export function getCurrentMonthInt() {
-  const now = new Date();
-  return now.getFullYear() * 100 + (now.getMonth() + 1);
+  return Math.floor(getTodayInt() / 100);
 }
 export function bahtToSatang(baht) {
   return Math.round(Number(baht) * 100);
@@ -24,7 +28,8 @@ const SHAPE = `
       SELECT  t.id, t.type, t.amount_satang   AS amountSatang,
               t.title, t.tx_date              AS txDate,
               t.month_key                     AS monthKey,
-              t.category_id                   AS categoryId, 
+              t.category_id                   AS categoryId,
+              c.name                          AS categoryName, 
               t.created_at                    AS createdAt
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id`;
@@ -72,27 +77,40 @@ export async function create(data) {
   return await findById(Number(result.lastInsertRowid));
 }
 export async function getMonthlySummary(monthKey = getCurrentMonthInt()) {
-  const list = await findAll({monthKey});
-  const budget = await getMonthlyBudget(monthKey);
-  let incomeSatang=0;
-  let expenseSatang=0;
-
-  for (const l of list) {
-    if (Number(l.type) === TX_TYPE.INCOME) incomeSatang += Number(l.amountSatang);
-    else expenseSatang += Number(l.amountSatang);
+  const [res, budget] = await Promise.all([
+    getDb().execute({
+      sql: `
+        SELECT type,
+               SUM(amount_satang) AS totalSatang,
+               COUNT(*)           AS txCount
+        FROM transactions
+        WHERE month_key = ?
+        GROUP BY type`,
+      args: [Number(monthKey)]
+    }),
+    getMonthlyBudget(monthKey)
+  ]);
+  let incomeSatang = 0;
+  let expenseSatang = 0;
+  let transactionCount = 0;
+  for (const row of res.rows) {
+    const sum = Number(row.totalSatang || 0);
+    const count = Number(row.txCount || 0);
+    transactionCount += count;
+    if (Number(row.type) === TX_TYPE.INCOME) incomeSatang += sum;
+    else expenseSatang += sum;
   }
-  const totalIncome = satangToBaht(incomeSatang);
-  const totalExpense = satangToBaht(expenseSatang);
-  const budgetLimit = budget ? budget.budgetLimit : null;
-  const budgetRemaining = budgetLimit !== null ? budgetLimit - totalExpense : null;
+  const balanceSatang = incomeSatang - expenseSatang;
+  const budgetLimitSatang = budget ? budget.budgetLimitSatang : null;
+  const budgetRemainingSatang = budgetLimitSatang !== null ? budgetLimitSatang - expenseSatang : null;
   return {
     monthKey: Number(monthKey),
-    totalIncome,
-    totalExpense,
-    balance: totalIncome - totalExpense,
-    transactionCount: list.length,
-    budgetLimit,
-    budgetRemaining
+    totalIncome: satangToBaht(incomeSatang),
+    totalExpense: satangToBaht(expenseSatang),
+    balance: satangToBaht(balanceSatang),
+    transactionCount,
+    budgetLimit: budgetLimitSatang !== null ? satangToBaht(budgetLimitSatang) : null,
+    budgetRemaining: budgetRemainingSatang !== null ? satangToBaht(budgetRemainingSatang) : null
   };
 }
 export async function remove(id) {
@@ -112,14 +130,18 @@ export async function getMonthlyBudget(monthKey = getCurrentMonthInt()){
       SELECT  month_key           AS monthKey,
               budget_limit_satang AS budgetLimitSatang,
               updated_at          AS updatedAt
-      FROM monthly_budgets
-      WHERE month_key = ? `,
+      FROM monthly_budgets              
+      WHERE month_key <= ?
+      ORDER BY month_key DESC
+      LIMIT 1 `,
     args:  [Number(monthKey)]
   });
   const row = res.rows[0];
   if (!row) return null;
+  const budgetLimitSatang = Number(row.budgetLimitSatang);
   return {
     monthKey: Number(row.monthKey),
+    budgetLimitSatang,
     budgetLimit: satangToBaht(row.budgetLimitSatang)
   }; 
 }

@@ -29,5 +29,8 @@ app.post('/api/bot/simulate', async (req, res) => {
 });
 
 app.use('/api/transactions', transactionRoutes);
-
+app.use((err, req, res, _next) => {
+  console.error('[API Error]:', err.message);
+  res.status(400).json({ error: err.message || 'Internal Server Error' });
+});
 export default app;

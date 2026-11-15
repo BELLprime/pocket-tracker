@@ -1,14 +1,26 @@
-import { test, before } from 'node:test';
+process.env.NODE_ENV = 'test';
+process.env.DB_PATH = './data/pocket.test.db';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSeed } from '../src/services/db.js';
-import * as transactionService from '../src/services/transactionService.js';
-import { parseChatMessage, validateTransactionInput } from '../src/validators/transactionValidator.js';
-import { handleIncomingText, handleCallbackQuery } from '../src/bot/telegramHandlers.js';
-import { config } from '../src/config.js';
+import { rmSync } from 'node:fs';
 
-// Initialize DB before running tests
+const { loadSeed, getDb } = await import('../src/services/db.js');
+const transactionService = await import('../src/services/transactionService.js');
+const { parseChatMessage, validateTransactionInput } = await import('../src/validators/transactionValidator.js');
+const { handleIncomingText, handleCallbackQuery } = await import('../src/bot/telegramHandlers.js');
+const { config } = await import('../src/config.js');
+// Initialize temporary DB before running tests
 before(async () => {
   await loadSeed();
+});
+// Clean up temporary DB file after all tests finish
+after(() => {
+  try {
+    getDb()?.close?.();
+    rmSync(config.dbFile, { force: true });
+  } catch {
+    // Windows may still hold the file lock briefly; .gitignore already ignores *.db
+    }
 });
 
 // 1. Chat parser test
