@@ -15,6 +15,7 @@ export function startTelegramPolling() {
     body: JSON.stringify({
       commands: [
         { command: 'summary', description: 'Summary this month' },
+        { command: 'list' , description: 'List transactions this month'},
         { command: 'budget', description: 'Set budget (e.g. /budget 5000)' },
         { command: 'undo', description: 'Undo latest transaction' }
       ]

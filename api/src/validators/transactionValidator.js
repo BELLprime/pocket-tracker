@@ -3,6 +3,7 @@ export function parseChatMessage(rawText) {
   if (!text) return null;
   if (text === '/summary') return { command: 'summary' };
   if (text === '/undo') return { command: 'undo'};
+  if (text === '/list') return { command: 'list'};
   
   const budgetMatch = text.match(/^(?:\/budget)\s+(\d+(?:\.\d+)?)$/i);
   if (budgetMatch) {

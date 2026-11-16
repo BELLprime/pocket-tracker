@@ -115,6 +115,19 @@ export async function handleIncomingText(text, chatUserId) {
       text: `↩"${undo.title}" (${transactionService.satangToBaht(undo.amountSatang)} ฿) → (Undo success.)`
     };
   }
+  if (parsed.command === 'list') {
+    const monthKey = transactionService.getCurrentMonthInt();
+    const list = await transactionService.findAll({monthKey});
+    if (list.length === 0) return { text: 'List in this month is empty.'};
+    const rows = list.map((item, index) => {
+      const sign = Number(item.type) === 1 ? '🔴 -' : '🟢 +';
+      const baht = transactionService.satangToBaht(item.amountSatang).toLocaleString();
+      const cat = item.categoryName ? ` [${item.categoryName}]` : '';
+      return `${index + 1}. ${sign}${baht} ฿ — ${item.title}${cat}`;
+    });
+    const text = `List (${monthKey})\n` + rows.join('\n');
+    return { text };
+  }
 
   return { text: 'Send "<item> <amount>" (e.g., Snack 20) or /summary' };
 }
