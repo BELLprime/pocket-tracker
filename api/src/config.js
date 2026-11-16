@@ -20,5 +20,6 @@ export const config = {
   telegramBotToken: (process.env.TELEGRAM_BOT_TOKEN ?? '').trim(),
   allowedTelegramIds: (process.env.ALLOWED_TELEGRAM_IDS ?? '').trim(),
   tursoUrl: (process.env.TURSO_DATABASE_URL ?? '').trim(),
-  tursoAuthToken: (process.env.TURSO_AUTH_TOKEN ?? '').trim()
+  tursoAuthToken: (process.env.TURSO_AUTH_TOKEN ?? '').trim(),
+  apiKey: (process.env.API_KEY ?? '').trim()
 };

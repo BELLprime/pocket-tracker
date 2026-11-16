@@ -6,6 +6,8 @@ import { config } from '../config.js';
 export let db;
 
 export async function loadSeed() {
+  if (config.isProd && !config.tursoUrl) 
+    throw new Error('Production requires TURSO_DATABASE_URL (refusing to use ephemeral local file)');
   if (config.isProd && config.tursoUrl) {
     console.log('[DB] Connecting to Turso Cloud SQLite...');
     db = createClient({

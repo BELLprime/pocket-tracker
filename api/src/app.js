@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import transactionRoutes from './routes/transactionRoutes.js';
-import { handleIncomingText, handleCallbackQuery } from './bot/telegramHandlers.js';
+import { config } from './config.js';
+import { requireApiKey } from './middleware/requireApiKey.js';
 
 const app = express();
 
@@ -18,19 +19,11 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-app.post('/api/bot/simulate', async (req, res) => {
-  const { text, action, chatUserId = 'local-tester' } = req.body ?? {};
-  if (action) {
-    const response = await handleCallbackQuery(action, chatUserId);
-    return res.status(200).json({ action, response });
-  }
-  const response = await handleIncomingText(text, chatUserId);
-  return res.status(200).json({ input: text, response });
-});
-
-app.use('/api/transactions', transactionRoutes);
+app.use('/api/transactions',requireApiKey,transactionRoutes);
 app.use((err, req, res, _next) => {
+  const status = err.status || err.statusCode || 500;
   console.error('[API Error]:', err.message);
-  res.status(400).json({ error: err.message || 'Internal Server Error' });
+  const message = status >= 500 && config.isProd ? 'Internal Server Error' : err.message;
+  res.status(status).json({ error: message });
 });
 export default app;
