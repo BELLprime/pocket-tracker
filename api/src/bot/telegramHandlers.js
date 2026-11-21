@@ -4,15 +4,6 @@ import { config } from '../config.js';
 
 const pendingDrafts = new Map();
 
-const CATEGORY_NAMES = {
-  1: 'Food & Snack',
-  2: 'Transport',
-  3: 'Bills',
-  4: 'Other Expense',
-  5: 'Salary',
-  6: 'Other Income'
-};
-
 const TYPE_SELECTION_KEYBOARD = {
   inline_keyboard: [
     [
@@ -22,37 +13,6 @@ const TYPE_SELECTION_KEYBOARD = {
     [{ text: '❌ Cancel', callback_data: 'cancel' }]
   ]
 };
-
-const EXPENSE_CATEGORY_KEYBOARD = {
-  inline_keyboard: [
-    [
-      { text: 'Food & Snack', callback_data: 'cat:1' },
-      { text: 'Transport', callback_data: 'cat:2' }
-    ],
-    [
-      { text: 'Bills', callback_data: 'cat:3' },
-      { text: 'Other Expense', callback_data: 'cat:4' }
-    ],
-    [
-      { text: '🔄 Back', callback_data: 'back_type' },
-      { text: '❌ Cancel', callback_data: 'cancel' }
-    ]
-  ]
-};
-
-const INCOME_CATEGORY_KEYBOARD = {
-  inline_keyboard: [
-    [
-      { text: 'Salary', callback_data: 'cat:5' },
-      { text: 'Other Income', callback_data: 'cat:6' }
-    ],
-    [
-      { text: '🔄 Back', callback_data: 'back_type' },
-      { text: '❌ Cancel', callback_data: 'cancel' }
-    ]
-  ]
-};
-
 const CONFIRM_KEYBOARD = {
   inline_keyboard: [
     [{ text: '✅ Confirm', callback_data: 'confirm' }],
@@ -62,6 +22,23 @@ const CONFIRM_KEYBOARD = {
     ]
   ]
 };
+function buildCategoryKeyboard(categories, type) {
+  const filtered = categories.filter((c)=> c.type === type);
+  const rows = [];
+  for (let i = 0; i < filtered.length; i += 2) {
+    rows.push(
+      filtered.slice(i, i + 2).map((c)=>({
+        text: c.name,
+        callback_data: `cat:${c.id}`
+      }))
+    );
+  }
+  rows.push([
+    {text:'🔄 Back', callback_data: 'back_type' },
+    {text:'❌ Cancel', callback_data: 'cancel' }
+  ]);
+  return { inline_keyboard: rows };
+}
 
 export async function handleIncomingText(text, chatUserId) {
   if (config.allowedTelegramIds && String(chatUserId) !== String(config.allowedTelegramIds)) {
@@ -145,19 +122,28 @@ export async function handleCallbackQuery(action, chatUserId) {
   if (action === 'type:1' || action === 'type:2') {
     draft.type = action === 'type:1' ? 1 : 2;
     draft.categoryId = null;
+    const categories = await transactionService.getCategories();
     const typeLabel = draft.type === 1 ? '🔴 Expense' : '🟢 Income';
     return {
       text: `📝 List: ${draft.title} (${draft.amountBaht} ฿)\n• Type: ${typeLabel}\n\n🏷️ Select category:`,
-      replyMarkup: draft.type === 1 ? EXPENSE_CATEGORY_KEYBOARD : INCOME_CATEGORY_KEYBOARD
+      replyMarkup: buildCategoryKeyboard(categories, draft.type)
     };
   }
 
   if (action.startsWith('cat:')) {
-    draft.categoryId = Number(action.slice(4));
+    const catId = Number(action.slice(4));
+    const categories = await transactionService.getCategories();
+    const matched = categories.find((c) => c.id === catId && c.type === draft.type);
+    if (!matched) {
+      return {
+        text: `!!Invalid category for this type. Please select again:`,
+        replyMarkup: buildCategoryKeyboard(categories, draft.type)
+      };
+    }
+    draft.categoryId = matched.id;
     const typeLabel = draft.type === 1 ? 'Expense' : 'Income';
-    const catLabel = CATEGORY_NAMES[draft.categoryId] ?? 'Other';
     return {
-      text: `📋 Confirm to save?\n• ${draft.title} (${draft.amountBaht} ฿)\n• Type: ${typeLabel}\n• Category: ${catLabel}`,
+      text: `📋 Confirm to save?\n• ${draft.title} (${draft.amountBaht} ฿)\n• Type: ${typeLabel}\n• Category: ${matched.name}`,
       replyMarkup: CONFIRM_KEYBOARD
     };
   }
@@ -176,7 +162,7 @@ export async function handleCallbackQuery(action, chatUserId) {
     pendingDrafts.delete(userKey);
     const isExpend = Number(created.type) === 1;
     const typeLabel = isExpend ? '🔴 Expense' : '🟢 Income';
-    const catLabel = CATEGORY_NAMES[created.categoryId] ? ` [${CATEGORY_NAMES[created.categoryId]}]` : '';
+    const catLabel = created.categoryName ? ` [${created.categoryName}]` : '';
     const gifUrl = isExpend
       ? 'https://media.tenor.com/WuVVP5QKTsYAAAAM/well-there%27s-nothing-we-can-do-napoleon.gif'
       : 'https://media.tenor.com/X4H0T0VxgokAAAAM/robert-redford-robert.gif';
@@ -185,6 +171,5 @@ export async function handleCallbackQuery(action, chatUserId) {
       gifUrl
     };
   }
-
   return { text: 'Please select an option below.↓' };
 }

@@ -166,3 +166,15 @@ export async function undoLastMessages(monthKey = getCurrentMonthInt()) {
   await remove(latest.id);
   return latest;
 }
+//Table categories
+export async function getCategories() {
+  const res=await getDb().execute({
+    sql: `SELECT id, type, name FROM categories WHERE is_active = 1 ORDER BY id`,
+    args: []
+  });
+  return res.rows.map((r)=>({
+    id: Number(r.id),
+    type: Number(r.type),
+    name: String(r.name)
+  }));
+}
