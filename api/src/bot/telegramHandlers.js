@@ -94,15 +94,19 @@ export async function handleIncomingText(text, chatUserId) {
   }
   if (parsed.command === 'list') {
     const monthKey = transactionService.getCurrentMonthInt();
-    const list = await transactionService.findAll({monthKey});
-    if (list.length === 0) return { text: 'List in this month is empty.'};
-    const rows = list.map((item, index) => {
+    const list = await transactionService.findAll({ monthKey });
+    if (list.length === 0) return { text: 'List in this month is empty.' };
+    const MAX_ITEMS = 30;
+    const rows = list.slice(0, MAX_ITEMS).map((item, index) => {
       const sign = Number(item.type) === 1 ? '🔴 -' : '🟢 +';
       const baht = transactionService.satangToBaht(item.amountSatang).toLocaleString();
       const cat = item.categoryName ? ` [${item.categoryName}]` : '';
       return `${index + 1}. ${sign}${baht} ฿ — ${item.title}${cat}`;
     });
-    const text = `List (${monthKey})\n` + rows.join('\n');
+    let text = `List (${monthKey})\n` + rows.join('\n');
+    if (list.length > MAX_ITEMS) {
+      text += `\n...and ${list.length - MAX_ITEMS} more`;
+    }
     return { text };
   }
 
@@ -110,6 +114,9 @@ export async function handleIncomingText(text, chatUserId) {
 }
 
 export async function handleCallbackQuery(action, chatUserId) {
+  if (config.allowedTelegramIds && String(chatUserId) !== String(config.allowedTelegramIds)) {
+    return { text: '!!Access denied. Owner only.' };
+  }
   const userKey = String(chatUserId);
   const draft = pendingDrafts.get(userKey);
 
@@ -158,18 +165,24 @@ export async function handleCallbackQuery(action, chatUserId) {
   }
 
   if (action === 'confirm' && draft.type) {
-    const created = await transactionService.create(draft);
-    pendingDrafts.delete(userKey);
-    const isExpend = Number(created.type) === 1;
-    const typeLabel = isExpend ? '🔴 Expense' : '🟢 Income';
-    const catLabel = created.categoryName ? ` [${created.categoryName}]` : '';
-    const gifUrl = isExpend
-      ? 'https://media.tenor.com/WuVVP5QKTsYAAAAM/well-there%27s-nothing-we-can-do-napoleon.gif'
-      : 'https://media.tenor.com/X4H0T0VxgokAAAAM/robert-redford-robert.gif';
-    return {
-      text: `✅ Saved! (#${created.id})\n${typeLabel}${catLabel}: ${created.title} (${draft.amountBaht} ฿)`,
-      gifUrl
-    };
+    try {
+      const created = await transactionService.create(draft);
+      pendingDrafts.delete(userKey);
+      const isExpend = Number(created.type) === 1;
+      const typeLabel = isExpend ? '🔴 Expense' : '🟢 Income';
+      const catLabel = created.categoryName ? ` [${created.categoryName}]` : '';
+      const gifUrl = isExpend
+        ? 'https://media.tenor.com/WuVVP5QKTsYAAAAM/well-there%27s-nothing-we-can-do-napoleon.gif'
+        : 'https://media.tenor.com/X4H0T0VxgokAAAAM/robert-redford-robert.gif';
+      return {
+        text: `✅ Saved! (#${created.id})\n${typeLabel}${catLabel}: ${created.title} (${draft.amountBaht} ฿)`,
+        gifUrl
+      };
+    } catch (err) {
+      console.error('[Bot Confirm Error]:', err.message);
+      pendingDrafts.delete(userKey);
+      return { text: '⚠️ Failed to save transaction. Please try again.' };
+    }
   }
   return { text: 'Please select an option below.↓' };
 }
