@@ -5,19 +5,18 @@ export function parseChatMessage(rawText) {
   if (text === '/undo') return { command: 'undo'};
   if (text === '/list') return { command: 'list'};
   
-  const budgetMatch = text.match(/^(?:\/budget)\s+(\d+(?:\.\d+)?)$/i);
+  const budgetMatch = text.match(/^(?:\/budget)\s+(\d+(?:\.\d{1,2})?)$/i);
   if (budgetMatch) {
     const limitBaht = Number(budgetMatch[1]);
     if (limitBaht >= 0) return { command: 'budget', limitBaht };
   }
-
+  if (text.startsWith('/')) return {command: 'unknow'}; 
   const splitTxt = text.match(/^(.+?)\s+(\d+(?:\.\d+)?)$/);
   if (splitTxt) {
     const title = splitTxt[1].trim();
     const amountBaht = Number(splitTxt[2]);
     if (title && amountBaht > 0) return { command: 'draft', title, amountBaht };
   }
-
   return { command: 'unknown' };
 }
 
